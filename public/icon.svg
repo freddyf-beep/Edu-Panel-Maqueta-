@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Left Page -->
+  <path d="M 20 25 C 20 25, 35 20, 46 25 L 46 72 C 35 67, 20 72, 20 72 Z" fill="#F43F5E" />
+  <!-- Right Page -->
+  <path d="M 80 25 C 80 25, 65 20, 54 25 L 54 72 C 65 67, 80 72, 80 72 Z" fill="#FBCFE8" />
+  <!-- Bookmark -->
+  <path d="M 46 73 L 50 82 L 54 73 Z" fill="#F43F5E" />
+</svg>

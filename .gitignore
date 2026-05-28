@@ -1,0 +1,65 @@
+# deps
+node_modules/
+.pnp
+.pnp.js
+
+# next
+.next/
+out/
+build/
+
+# env
+.env
+.env.local
+.env.vercel
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup.local
+
+# Firebase / credenciales
+firebase-adminsdk-*.json
+service-account*.json
+*-service-account.json
+.firebase/
+.firebaserc.local
+
+# Vercel
+.vercel/
+
+# herramientas locales de agentes
+.claude/
+.codex/
+.kiro/
+.vscode/settings.json
+.git.broken_*/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+ts_errors.log
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+
+# datos locales
+Archivos de Curriculum/
+PDF Y .JSON CURSOS/
+PDF-FREDDY/
+Pruebas y Ribricas 2026/
+backups/
+/tmp/
+/backup_*/
+scratch/
+scratch_*.js
+inspect_*.py
+read_pdf.py
+search_config.py
+*.bak
+scratch.*
+*.zip
