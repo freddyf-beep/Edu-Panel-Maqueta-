@@ -1,14 +1,11 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import { auth } from "@/lib/firebase"
-import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth"
-import { isEmailAllowed } from "@/lib/allowlist"
+import { User } from "firebase/auth"
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  /** Si es true, hubo login pero el email no esta en la allowlist. */
   blockedByAllowlist: boolean
   signInWithGoogle: () => Promise<void>
   signInWithGoogleCalendar: () => Promise<void>
@@ -19,105 +16,59 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
 
+const MOCK_USER: User = {
+  uid: "mock-invitado-uid-12345",
+  email: "invitado@edupanel.cl",
+  displayName: "Freddy (Invitado)",
+  photoURL: "/placeholder-user.jpg",
+  emailVerified: true,
+} as unknown as User
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Inicializamos con el usuario mock para saltar el login de inmediato
+  const [user, setUser] = useState<User | null>(MOCK_USER)
+  const [loading, setLoading] = useState(false)
   const [blockedByAllowlist, setBlockedByAllowlist] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        setUser(null)
-        setBlockedByAllowlist(false)
-        setLoading(false)
-        return
-      }
-
-      // Verificar que el email este invitado a la alfa cerrada
-      const allowed = await isEmailAllowed(currentUser.email)
-      if (!allowed) {
-        setUser(currentUser)
-        setBlockedByAllowlist(true)
-        setLoading(false)
-        return
-      }
-
-      setBlockedByAllowlist(false)
-      setUser(currentUser)
-      setLoading(false)
-    })
-    return () => unsubscribe()
+    // Mantener al usuario mock inicializado y apagar la carga
+    setUser(MOCK_USER)
+    setLoading(false)
+    setBlockedByAllowlist(false)
   }, [])
 
   const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider()
-    provider.addScope("profile")
-    provider.addScope("email")
-    try {
-      await signInWithPopup(auth, provider)
-      // El check de allowlist se hace en onAuthStateChanged arriba
-    } catch (error) {
-      console.error("Error signing in with Google", error)
-      throw error
-    }
+    setLoading(true)
+    setTimeout(() => {
+      setUser(MOCK_USER)
+      setBlockedByAllowlist(false)
+      setLoading(false)
+    }, 500)
   }
 
   const signInWithGoogleCalendar = async () => {
-    const provider = new GoogleAuthProvider()
-    provider.addScope("profile")
-    provider.addScope("email")
-    provider.addScope("https://www.googleapis.com/auth/calendar.events")
-    provider.setCustomParameters({ prompt: "consent" })
-    try {
-      const result = await signInWithPopup(auth, provider)
-      const credential = GoogleAuthProvider.credentialFromResult(result)
-      if (!credential?.accessToken) {
-        throw new Error("No se recibio token de Google Calendar")
-      }
-      const { guardarGoogleCalendarToken } = await import("@/lib/google-calendar")
-      guardarGoogleCalendarToken(credential.accessToken)
-    } catch (error) {
-      console.error("Error connecting Google Calendar", error)
-      throw error
-    }
+    // Mock de conexión de Calendar
+    const { guardarGoogleCalendarToken } = await import("@/lib/google-calendar")
+    guardarGoogleCalendarToken("mock-calendar-token-12345")
   }
 
   const signInWithGoogleDrive = async () => {
-    const provider = new GoogleAuthProvider()
-    provider.addScope("profile")
-    provider.addScope("email")
-    provider.addScope("https://www.googleapis.com/auth/drive.metadata.readonly")
-    provider.addScope("https://www.googleapis.com/auth/drive.file")
-    provider.setCustomParameters({ prompt: "consent" })
-    try {
-      const result = await signInWithPopup(auth, provider)
-      const credential = GoogleAuthProvider.credentialFromResult(result)
-      if (!credential?.accessToken) {
-        throw new Error("No se recibio token de Google Drive")
-      }
-      const { guardarGoogleDriveToken } = await import("@/lib/google-drive")
-      guardarGoogleDriveToken(credential.accessToken)
-    } catch (error) {
-      console.error("Error connecting Google Drive", error)
-      throw error
-    }
+    // Mock de conexión de Drive
+    const { guardarGoogleDriveToken } = await import("@/lib/google-drive")
+    guardarGoogleDriveToken("mock-drive-token-12345")
   }
 
   const logout = async () => {
-    try {
-      await signOut(auth)
-    } catch (error) {
-      console.error("Error signing out", error)
-      throw error
-    }
+    setLoading(true)
+    setTimeout(() => {
+      setUser(null)
+      setBlockedByAllowlist(false)
+      setLoading(false)
+    }, 500)
   }
 
   const recheckAllowlist = async () => {
-    if (!user) return
-    const allowed = await isEmailAllowed(user.email)
-    if (allowed) {
-      setBlockedByAllowlist(false)
-    }
+    setBlockedByAllowlist(false)
   }
 
   return (
