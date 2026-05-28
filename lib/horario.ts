@@ -130,10 +130,37 @@ export async function guardarHorarioSemanal(clases: ClaseHorario[]): Promise<voi
   })
 }
 
+const MOCK_HORARIO: ClaseHorario[] = [
+  // Lunes
+  { uid: "mock_h1", resumen: "4to Básico", dia: "Lunes", horaInicio: "08:30", horaFin: "09:15", color: "#e11d48", tipo: "clase", asignatura: "Música" },
+  { uid: "mock_h2", resumen: "4to Básico", dia: "Lunes", horaInicio: "09:15", horaFin: "10:00", color: "#e11d48", tipo: "clase", asignatura: "Música" },
+  { uid: "mock_h3", resumen: "Recreo", dia: "Lunes", horaInicio: "10:00", horaFin: "10:15", color: "#94a3b8", tipo: "recreo" },
+  { uid: "mock_h4", resumen: "2do Básico", dia: "Lunes", horaInicio: "10:15", horaFin: "11:00", color: "#2563eb", tipo: "clase", asignatura: "Música" },
+  // Martes
+  { uid: "mock_h5", resumen: "4to Básico", dia: "Martes", horaInicio: "11:15", horaFin: "12:00", color: "#e11d48", tipo: "clase", asignatura: "Música" },
+  { uid: "mock_h6", resumen: "4to Básico", dia: "Martes", horaInicio: "12:00", horaFin: "12:45", color: "#e11d48", tipo: "clase", asignatura: "Música" },
+  // Miércoles
+  { uid: "mock_h7", resumen: "6to Básico", dia: "Miércoles", horaInicio: "08:30", horaFin: "09:15", color: "#059669", tipo: "clase", asignatura: "Música" },
+  { uid: "mock_h8", resumen: "6to Básico", dia: "Miércoles", horaInicio: "09:15", horaFin: "10:00", color: "#059669", tipo: "clase", asignatura: "Música" },
+  // Jueves
+  { uid: "mock_h9", resumen: "4to Básico", dia: "Jueves", horaInicio: "10:15", horaFin: "11:00", color: "#e11d48", tipo: "clase", asignatura: "Música" },
+  { uid: "mock_h10", resumen: "Planificación", dia: "Jueves", horaInicio: "11:00", horaFin: "11:45", color: "#d97706", tipo: "planificacion" },
+  // Viernes
+  { uid: "mock_h11", resumen: "4to Básico", dia: "Viernes", horaInicio: "08:30", horaFin: "09:15", color: "#e11d48", tipo: "clase", asignatura: "Música" },
+  { uid: "mock_h12", resumen: "Trabajo Colaborativo", dia: "Viernes", horaInicio: "09:15", horaFin: "10:00", color: "#6b7280", tipo: "trabajo_colaborativo" },
+]
+
 export async function cargarHorarioSemanal(): Promise<ClaseHorario[]> {
-  const snap = await getDoc(userDoc("configuracion", "horario"))
-  if (!snap.exists()) return []
-  return (snap.data() as HorarioGuardado).clases || []
+  try {
+    const snap = await getDoc(userDoc("configuracion", "horario"))
+    if (snap.exists()) {
+      const clases = (snap.data() as HorarioGuardado).clases || []
+      if (clases.length > 0) return clases
+    }
+  } catch (e) {
+    console.warn("Error al cargar horario de Firestore, usando mockup:", e)
+  }
+  return MOCK_HORARIO
 }
 
 export function getDiaActual(): string {

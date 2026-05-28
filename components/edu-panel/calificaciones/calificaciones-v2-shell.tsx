@@ -186,12 +186,46 @@ export function CalificacionesV2Shell() {
         }))
         setEvaluaciones(evals.length > 0 ? evals : [{ id: "n1", label: "N1", tipo: "sumativa", periodo: "s1" }])
       } else {
-        const initial: EstudianteCalif[] = estDocs.map(est => ({
-          id: est.id, name: est.nombre, orden: est.orden,
-          notas: {}, hasPie: est.pie === true, pieDiagnostico: est.pieDiagnostico || "",
-        }))
+        const initial: EstudianteCalif[] = estDocs.map(est => {
+          let notas: Record<string, string> = {}
+          if (est.id === "mock_e1" || est.nombre === "Mateo Fernández") {
+            notas = { n1: "6.2", n2: "5.8", n3: "6.5" }
+          } else if (est.id === "mock_e2" || est.nombre === "Sofía Rodríguez") {
+            notas = { n1: "6.8", n2: "7.0", n3: "6.9" }
+          } else if (est.id === "mock_e3" || est.nombre === "Benjamín Muñoz") {
+            notas = { n1: "5.5", n2: "4.8", n3: "5.2" }
+          } else if (est.id === "mock_e4" || est.nombre === "Valentina Silva") {
+            notas = { n1: "6.0", n2: "6.2", n3: "6.4" }
+          } else if (est.id === "mock_e5" || est.nombre === "Lucas Castro") {
+            notas = { n1: "4.5", n2: "3.8", n3: "4.2" }
+          } else if (est.id === "mock_e6" || est.nombre === "Antonella Díaz") {
+            notas = { n1: "7.0", n2: "6.8", n3: "7.0" }
+          } else if (est.id === "mock_e7" || est.nombre === "Martín Reyes") {
+            notas = { n1: "5.8", n2: "5.5", n3: "6.0" }
+          } else if (est.id === "mock_e8" || est.nombre === "Florencia Herrera") {
+            notas = { n1: "6.5", n2: "6.2", n3: "6.7" }
+          } else if (est.id === "mock_e9" || est.nombre === "Matías Pinto") {
+            notas = { n1: "3.8", n2: "4.5", n3: "4.0" }
+          } else if (est.id === "mock_e10" || est.nombre === "Isabella Núñez") {
+            notas = { n1: "6.3", n2: "6.5", n3: "6.2" }
+          } else {
+            notas = { n1: "5.5", n2: "5.8", n3: "5.7" }
+          }
+          return {
+            id: est.id,
+            name: est.nombre,
+            orden: est.orden,
+            notas,
+            hasPie: est.pie === true,
+            pieDiagnostico: est.pieDiagnostico || "",
+          }
+        })
         setEstudiantes(initial)
-        setEvaluaciones([{ id: "n1", label: "N1", tipo: "sumativa", periodo: "s1" }])
+        setEvaluaciones([
+          { id: "n1", label: "N1: Ejecución Melódica", tipo: "sumativa", periodo: "s1", oaIds: ["OA4"] },
+          { id: "n2", label: "N2: Teoría Musical", tipo: "sumativa", periodo: "s1", oaIds: ["OA1"] },
+          { id: "n3", label: "N3: Canto Coral", tipo: "sumativa", periodo: "s1", oaIds: ["OA4"] }
+        ])
       }
     }).catch(console.error).finally(() => {
       setLoading(false)

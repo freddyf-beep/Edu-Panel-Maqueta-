@@ -49,29 +49,42 @@ export function normalizeEstudiantes(alumnos: Estudiante[]): Estudiante[] {
     .sort(compareEstudiantes)
 }
 
-export async function cargarEstudiantes(curso: string): Promise<Estudiante[]> {
-  const auth = getAuth()
-  const user = auth.currentUser
-  if (!user) throw new Error("No autenticado")
+const MOCK_ESTUDIANTES: Estudiante[] = [
+  { id: "mock_e1", nombre: "Mateo Fernández", orden: 1, pie: true, pieDiagnostico: "TDAH", pieEspecialista: "Psicopedagoga", pieNotas: "Requiere apoyo en concentración y pausas durante evaluaciones." },
+  { id: "mock_e2", nombre: "Sofía Rodríguez", orden: 2 },
+  { id: "mock_e3", nombre: "Benjamín Muñoz", orden: 3, pie: true, pieDiagnostico: "Dificultad de aprendizaje (Cálculo)", pieEspecialista: "Educadora Diferencial", pieNotas: "Requiere material concreto para operaciones de conteo." },
+  { id: "mock_e4", nombre: "Valentina Silva", orden: 4 },
+  { id: "mock_e5", nombre: "Lucas Castro", orden: 5 },
+  { id: "mock_e6", nombre: "Antonella Díaz", orden: 6 },
+  { id: "mock_e7", nombre: "Martín Reyes", orden: 7 },
+  { id: "mock_e8", nombre: "Florencia Herrera", orden: 8 },
+  { id: "mock_e9", nombre: "Matías Pinto", orden: 9 },
+  { id: "mock_e10", nombre: "Isabella Núñez", orden: 10 },
+]
 
-  const basePath = `users/${user.uid}/estudiantes`
-  const cursoId = buildCursoId(curso)
-  
+export async function cargarEstudiantes(curso: string): Promise<Estudiante[]> {
   try {
-    let snap = await getDoc(doc(db, basePath, cursoId))
-    if (!snap.exists()) {
-      const legacyId = legacyCursoId(curso)
-      if (legacyId !== cursoId) {
-        snap = await getDoc(doc(db, basePath, legacyId))
+    const auth = getAuth()
+    const user = auth.currentUser
+    if (user) {
+      const basePath = `users/${user.uid}/estudiantes`
+      const cursoId = buildCursoId(curso)
+      let snap = await getDoc(doc(db, basePath, cursoId))
+      if (!snap.exists()) {
+        const legacyId = legacyCursoId(curso)
+        if (legacyId !== cursoId) {
+          snap = await getDoc(doc(db, basePath, legacyId))
+        }
       }
-    }
-    if (snap.exists()) {
-      return normalizeEstudiantes((snap.data().alumnos || []) as Estudiante[])
+      if (snap.exists()) {
+        const alumnos = (snap.data().alumnos || []) as Estudiante[]
+        if (alumnos.length > 0) return normalizeEstudiantes(alumnos)
+      }
     }
   } catch (error) {
     console.error("Error cargando estudiantes para curso", curso, error)
   }
-  return []
+  return normalizeEstudiantes(MOCK_ESTUDIANTES)
 }
 
 export async function guardarEstudiantes(curso: string, alumnos: Estudiante[]): Promise<void> {

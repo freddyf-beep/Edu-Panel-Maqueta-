@@ -197,16 +197,50 @@ export async function getAsignaturasDisponibles(): Promise<string[]> {
     .map(([, label]) => label)
 }
 
-// ─── Leer todas las unidades de una asignatura/nivel ─────────────────────────
-export async function getUnidades(asignatura: string, nivel: string): Promise<Unidad[]> {
-  const docId = buildDocId(asignatura, nivel)
-  const unidadesRef = collection(db, "curriculo", docId, "unidades")
-  const snap = await getDocs(query(unidadesRef, orderBy("numero_unidad")))
 
-  return snap.docs.map(d => ({
-    id: d.id,
-    ...d.data()
-  })) as Unidad[]
+// ─── Leer todas las unidades de una asignatura/nivel ─────────────────────────
+const MOCK_UNIDADES_LIST: Unidad[] = [
+  {
+    id: "unidad_1",
+    numero_unidad: 1,
+    nombre_unidad: "Desarrollo de la voz y canto coral",
+    proposito: "Fomentar el desarrollo de habilidades vocales y la expresión colectiva a través del canto afinado.",
+    palabras_clave: ["Canto", "Voz", "Coral", "Ritmo", "Afinación"],
+    conocimientos: ["Cualidades básicas del sonido", "Elementos básicos de notación musical"],
+    habilidades: ["Escuchar y cantar afinadamente colectivamente"],
+    actitudes: ["Disposición al disfrute musical y trabajo colaborativo"],
+    conocimientos_previos: ["Diferenciación básica de sonidos agudos y graves"],
+    adecuaciones_dua: "Uso de apoyos visuales y gestuales para la dirección coral; ejercicios de respiración adaptados."
+  },
+  {
+    id: "unidad_2",
+    numero_unidad: 2,
+    nombre_unidad: "Instrumentos folclóricos y raíces musicales",
+    proposito: "Explorar la música tradicional y folclórica chilena e interpretar canciones sencillas con instrumentos locales.",
+    palabras_clave: ["Folclor", "Tradición", "Instrumentos", "Tonada", "Ritmos chilenos"],
+    conocimientos: ["Instrumentos folclóricos chilenos (charango, metalófono, pandereta)", "Danzas tradicionales"],
+    habilidades: ["Ejecución instrumental básica", "Reconocimiento auditivo del folclor"],
+    actitudes: ["Respeto por el patrimonio cultural y la diversidad"],
+    conocimientos_previos: ["Pulso y acento rítmico"],
+    adecuaciones_dua: "Adaptación física de instrumentos; uso de códigos de color para la notación instrumental."
+  }
+]
+
+export async function getUnidades(asignatura: string, nivel: string): Promise<Unidad[]> {
+  try {
+    const docId = buildDocId(asignatura, nivel)
+    const unidadesRef = collection(db, "curriculo", docId, "unidades")
+    const snap = await getDocs(query(unidadesRef, orderBy("numero_unidad")))
+    if (!snap.empty) {
+      return snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      })) as Unidad[]
+    }
+  } catch (e) {
+    console.warn("Error al cargar unidades de Firestore, usando mockup:", e)
+  }
+  return MOCK_UNIDADES_LIST
 }
 
 // ─── Leer una unidad específica con todos sus sub-datos ──────────────────────
@@ -396,15 +430,68 @@ export async function guardarVerUnidad(
   }), { merge: true })
 }
 
+const MOCK_VER_UNIDAD_DEFAULT: VerUnidadGuardada = {
+  descripcion: "Esta unidad se centra en desarrollar las habilidades vocales individuales y grupales de los estudiantes, fomentando la afinación, la articulación, la respiración adecuada y la interpretación de un repertorio coral diverso y adaptado a su edad.",
+  contextoDocente: "Estudiantes muestran gran interés por cantar, aunque requieren apoyo en técnicas de respiración y afinación colectiva.",
+  objetivoDocente: "Lograr que al menos el 90% del curso cante afinadamente al unísono y en grupos pequeños a dos voces.",
+  horas: 16,
+  clases: 8,
+  oas: [
+    {
+      id: "OA1",
+      numero: 1,
+      tipo: "oa",
+      descripcion: "Escuchar cualidades del sonido (altura, timbre, intensidad, duración) y elementos del lenguaje musical (pulsos, acentos, patrones rítmicos) y representarlos de diversas formas.",
+      seleccionado: true,
+      indicadores: [
+        { id: "ind1_1", texto: "Identifican y describen cualidades del sonido en audiciones diversas.", seleccionado: true },
+        { id: "ind1_2", texto: "Representan corporalmente el pulso, acento y ritmos de las canciones.", seleccionado: true },
+        { id: "ind1_3", texto: "Diferencian timbres instrumentales del folclor chileno.", seleccionado: false },
+      ]
+    },
+    {
+      id: "OA4",
+      numero: 4,
+      tipo: "oa",
+      descripcion: "Cantar (al unísono y cantar a dos voces) y tocar instrumentos de percusión y melódicos (placas, teclado, flauta dulce, metalófono u otros).",
+      seleccionado: true,
+      indicadores: [
+        { id: "ind4_1", texto: "Cantan con afinación colectiva al unísono cuidando la postura y respiración.", seleccionado: true },
+        { id: "ind4_2", texto: "Tocan patrones rítmicos simples con metalófonos y panderos.", seleccionado: true },
+      ]
+    }
+  ],
+  habilidades: [
+    { id: "h1", texto: "Escuchar de forma activa y atenta producciones musicales.", seleccionado: true },
+    { id: "h2", texto: "Desarrollar la expresión vocal y auditiva.", seleccionado: true },
+  ],
+  conocimientos: [
+    { id: "c1", texto: "Cualidades básicas del sonido (altura, duración, intensidad, timbre).", seleccionado: true },
+    { id: "c2", texto: "Elementos de la notación musical tradicional y no tradicional.", seleccionado: true },
+  ],
+  actitudes: [
+    { id: "a1", texto: "Demostrar disposición a desarrollar su curiosidad y disfrutar de las manifestaciones musicales.", seleccionado: true },
+  ],
+  actividades: [
+    { id: "act_1", nombre: "Práctica de respiración diafragmática y vocalización básica.", tipo: "Clase", fecha: "05/03/2026", duracion: "90 min", estado: "completada" },
+    { id: "act_2", nombre: "Lectura rítmica con percusión corporal e instrumentos simples.", tipo: "Clase", fecha: "12/03/2026", duracion: "90 min", estado: "completada" },
+    { id: "act_3", nombre: "Canto al unísono de una tonada tradicional chilena.", tipo: "Clase", fecha: "19/03/2026", duracion: "90 min", estado: "pendiente" },
+  ]
+}
+
 export async function cargarVerUnidad(
   asignatura: string,
   curso: string,
   unidadId: string
 ): Promise<VerUnidadGuardada | null> {
-  const id = buildVerUnidadId(asignatura, curso, unidadId)
-  const snap = await getDoc(userDoc("ver_unidad", id))
-  if (!snap.exists()) return null
-  return snap.data() as VerUnidadGuardada
+  try {
+    const id = buildVerUnidadId(asignatura, curso, unidadId)
+    const snap = await getDoc(userDoc("ver_unidad", id))
+    if (snap.exists()) return snap.data() as VerUnidadGuardada
+  } catch (e) {
+    console.warn("Error al cargar ver_unidad de Firestore, usando mockup:", e)
+  }
+  return MOCK_VER_UNIDAD_DEFAULT
 }
 
 // ─── Banco Curricular del Docente (Aislamiento por nivel) ────────────────────
@@ -531,14 +618,36 @@ export async function guardarPlanCurso(
   }))
 }
 
+const MOCK_PLAN_CURSO: PlanificacionCurso = {
+  curso: "4to Básico",
+  asignatura: "Música",
+  units: [
+    { id: 1, name: "Unidad 1: Desarrollo de la voz y canto coral", color: "#e11d48", hours: 16, start: "2026-03-01", end: "2026-04-30", type: "tradicional", unidadCurricularId: "unidad_1" },
+    { id: 2, name: "Unidad 2: Instrumentos folclóricos y raíces musicales", color: "#d97706", hours: 20, start: "2026-05-01", end: "2026-06-30", type: "proyecto", unidadCurricularId: "unidad_2" },
+    { id: 3, name: "Unidad 3: Apreciación musical y auditiva de obras chilenas", color: "#2563eb", hours: 14, start: "2026-08-01", end: "2026-09-30", type: "tradicional", unidadCurricularId: "unidad_3" },
+    { id: 4, name: "Unidad 4: Creación y sonorización de relatos", color: "#059669", hours: 18, start: "2026-10-01", end: "2026-11-30", type: "invertida", unidadCurricularId: "unidad_4" },
+  ]
+}
+
 export async function cargarPlanCurso(
   asignatura: string,
   curso: string
 ): Promise<PlanificacionCurso | null> {
-  const id = buildPlanCursoId(asignatura, curso)
-  const snap = await getDoc(userDoc("planificaciones_curso", id))
-  if (!snap.exists()) return null
-  return snap.data() as PlanificacionCurso
+  try {
+    const id = buildPlanCursoId(asignatura, curso)
+    const snap = await getDoc(userDoc("planificaciones_curso", id))
+    if (snap.exists()) {
+      const data = snap.data() as PlanificacionCurso
+      if (data && data.units && data.units.length > 0) return data
+    }
+  } catch (e) {
+    console.warn("Error al cargar plan de curso de Firestore, usando mockup:", e)
+  }
+  return {
+    ...MOCK_PLAN_CURSO,
+    curso,
+    asignatura
+  }
 }
 
 
@@ -724,15 +833,41 @@ export async function guardarCronogramaUnidad(
   }))
 }
 
+const MOCK_CRONOGRAMA_UNIDAD_DEFAULT: CronogramaUnidadData = {
+  asignatura: "Música",
+  curso: "4to Básico",
+  unidadId: "unidad_1",
+  totalClases: 8,
+  clases: [
+    { numero: 1, fecha: "05/03/2026", oaIds: ["OA1"] },
+    { numero: 2, fecha: "12/03/2026", oaIds: ["OA1", "OA4"] },
+    { numero: 3, fecha: "19/03/2026", oaIds: ["OA4"] },
+    { numero: 4, fecha: "26/03/2026", oaIds: ["OA4"] },
+    { numero: 5, fecha: "02/04/2026", oaIds: ["OA1"] },
+    { numero: 6, fecha: "09/04/2026", oaIds: ["OA4"] },
+    { numero: 7, fecha: "16/04/2026", oaIds: ["OA1", "OA4"] },
+    { numero: 8, fecha: "23/04/2026", oaIds: ["OA4"] },
+  ]
+}
+
 export async function cargarCronogramaUnidad(
   asignatura: string,
   curso: string,
   unidadId: string
 ): Promise<CronogramaUnidadData | null> {
-  const id = buildCronogramaUnidadId(asignatura, curso, unidadId)
-  const snap = await getDoc(userDoc("cronograma_unidad", id))
-  if (!snap.exists()) return null
-  return snap.data() as CronogramaUnidadData
+  try {
+    const id = buildCronogramaUnidadId(asignatura, curso, unidadId)
+    const snap = await getDoc(userDoc("cronograma_unidad", id))
+    if (snap.exists()) return snap.data() as CronogramaUnidadData
+  } catch (e) {
+    console.warn("Error al cargar cronograma de unidad de Firestore, usando mockup:", e)
+  }
+  return {
+    ...MOCK_CRONOGRAMA_UNIDAD_DEFAULT,
+    asignatura,
+    curso,
+    unidadId
+  }
 }
 
 export function normalizarFechaClase(fecha: string): string {

@@ -63,3 +63,5 @@ search_config.py
 *.bak
 scratch.*
 *.zip
+
+.vercel
