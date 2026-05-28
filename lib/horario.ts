@@ -3,7 +3,9 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore"
 
 function getUid(): string {
   const uid = auth?.currentUser?.uid
-  if (!uid) throw new Error("Usuario no autenticado")
+  if (!uid) {
+    return "mock-invitado-uid-12345"
+  }
   return uid
 }
 
@@ -124,10 +126,19 @@ export function colisionaConHorario(clases: ClaseHorario[], nuevo: ClaseHorario,
 // ─── Horario Dinámico del Profesor ───
 
 export async function guardarHorarioSemanal(clases: ClaseHorario[]): Promise<void> {
-  await setDoc(userDoc("configuracion", "horario"), {
-    clases,
-    updatedAt: serverTimestamp()
-  })
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("mock_horario_semanal", JSON.stringify(clases))
+    } catch { /* noop */ }
+  }
+  try {
+    await setDoc(userDoc("configuracion", "horario"), {
+      clases,
+      updatedAt: serverTimestamp()
+    })
+  } catch (err) {
+    console.warn("Error guardando horario en Firestore, usando fallback localStorage:", err)
+  }
 }
 
 const MOCK_HORARIO: ClaseHorario[] = [
@@ -160,6 +171,15 @@ export async function cargarHorarioSemanal(): Promise<ClaseHorario[]> {
   } catch (e) {
     console.warn("Error al cargar horario de Firestore, usando mockup:", e)
   }
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_horario_semanal")
+      if (stored) {
+        const clases = JSON.parse(stored) as ClaseHorario[]
+        if (Array.isArray(clases) && clases.length > 0) return clases
+      }
+    } catch { /* noop */ }
+  }
   return MOCK_HORARIO
 }
 
@@ -171,14 +191,35 @@ export function getDiaActual(): string {
 
 // ─── Estado de Clases Completadas Diarias ───
 export async function guardarEstadoClases(estado: Record<string, boolean>, fecha: string): Promise<void> {
-  await setDoc(userDoc("horario_estado", fecha), {
-    estado,
-    updatedAt: serverTimestamp()
-  })
+  const normalizedFecha = fecha.replace(/\//g, "-")
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(`mock_horario_estado_${normalizedFecha}`, JSON.stringify(estado))
+    } catch { /* noop */ }
+  }
+  try {
+    await setDoc(userDoc("horario_estado", normalizedFecha), {
+      estado,
+      updatedAt: serverTimestamp()
+    })
+  } catch (err) {
+    console.warn("Error guardando estado_clases en Firestore:", err)
+  }
 }
 
 export async function cargarEstadoClases(fecha: string): Promise<Record<string, boolean>> {
-  const snap = await getDoc(userDoc("horario_estado", fecha))
-  if (!snap.exists()) return {}
-  return (snap.data() as any).estado || {}
+  const normalizedFecha = fecha.replace(/\//g, "-")
+  try {
+    const snap = await getDoc(userDoc("horario_estado", normalizedFecha))
+    if (snap.exists()) return (snap.data() as any).estado || {}
+  } catch (err) {
+    console.warn("Error al cargar estado_clases de Firestore:", err)
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(`mock_horario_estado_${normalizedFecha}`)
+      if (stored) return JSON.parse(stored) as Record<string, boolean>
+    } catch { /* noop */ }
+  }
+  return {}
 }

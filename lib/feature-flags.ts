@@ -65,31 +65,57 @@ function mergeFeatureFlags(remote: Record<string, any> | undefined): Record<stri
 }
 
 export async function getFeatureFlags(): Promise<Record<string, FeatureFlag>> {
+  let baseFlags = DEFAULT_FEATURE_FLAGS
   try {
     const docRef = doc(db, "config", "feature_flags")
     const snap = await getDoc(docRef)
     
     if (snap.exists()) {
-      return mergeFeatureFlags(snap.data())
+      baseFlags = mergeFeatureFlags(snap.data())
     } else {
-      // Initialize if missing
       await setDoc(docRef, DEFAULT_FEATURE_FLAGS)
-      return DEFAULT_FEATURE_FLAGS
+      baseFlags = DEFAULT_FEATURE_FLAGS
     }
   } catch (error) {
-    console.error("Error fetching feature flags", error)
-    return SAFE_FALLBACK_FEATURE_FLAGS
+    console.error("Error fetching feature flags, using fallback:", error)
+    baseFlags = { ...SAFE_FALLBACK_FEATURE_FLAGS }
   }
+
+  // Aplicar anulaciones de localStorage en modo offline
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_feature_flags")
+      if (stored) {
+        const overrides = JSON.parse(stored)
+        for (const [key, val] of Object.entries(overrides)) {
+          if (baseFlags[key]) {
+            baseFlags[key].active = !!val
+          }
+        }
+      }
+    } catch { /* noop */ }
+  }
+
+  return baseFlags
 }
 
 export async function updateFeatureFlag(id: string, active: boolean): Promise<void> {
+  // Guardar en localStorage de inmediato para persistencia offline
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_feature_flags")
+      const current = stored ? JSON.parse(stored) : {}
+      current[id] = active
+      localStorage.setItem("mock_feature_flags", JSON.stringify(current))
+    } catch { /* noop */ }
+  }
+
   try {
     const docRef = doc(db, "config", "feature_flags")
     await updateDoc(docRef, {
       [`${id}.active`]: active
     })
   } catch (error) {
-    console.error("Error updating feature flag", error)
-    throw error
+    console.warn("Error updating feature flag on Firestore, using localStorage fallback:", error)
   }
 }

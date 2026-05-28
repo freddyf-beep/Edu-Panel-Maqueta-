@@ -48,7 +48,7 @@ export async function isEmailAllowed(email: string | null | undefined): Promise<
   if (!normalizedEmail) return false
 
   // Bypass para usuario de invitado en la maqueta
-  if (normalizedEmail === "invitado@edupanel.cl" || normalizedEmail === "invitado@edupanel.com") {
+  if (normalizedEmail === "invitado@edupanel.cl" || normalizedEmail === "invitado@edupanel.com" || normalizedEmail === "guest@edupanel.cl") {
     return true
   }
 

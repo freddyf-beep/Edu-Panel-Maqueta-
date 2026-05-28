@@ -15,7 +15,9 @@ import { getCurriculoNivel, normalizeKeyPart } from "@/lib/shared"
 
 function getUid(): string {
   const uid = auth?.currentUser?.uid
-  if (!uid) throw new Error("Usuario no autenticado")
+  if (!uid) {
+    return "mock-invitado-uid-12345"
+  }
   return uid
 }
 
@@ -576,22 +578,156 @@ export function calcularPuntajeMaximo(partes: RubricaParte[]): number {
 
 // ─── Plantillas de Rúbrica ────────────────────────────────────────────────────
 
+function getMockRubricaMusica(asignatura: string, curso: string): RubricaTemplate {
+  return normalizarRubricaTemplate({
+    id: `mock_rubrica_musica_${normalizeKeyPart(curso)}`,
+    nombre: "Evaluación Sumativa: Ejecución Melódica y Canto Coral",
+    asignatura,
+    curso,
+    unidadId: "unidad_1",
+    unidadNombre: "Unidad 1: Desarrollo de la voz y canto coral",
+    puntajeMaximo: 16,
+    partes: [
+      {
+        id: "parte_1",
+        orden: 1,
+        nombre: "Parte 1: Ejecución Musical",
+        oasVinculados: ["OA 1"],
+        criterios: [
+          {
+            id: "crit_afinacion",
+            orden: 1,
+            nombre: "Afinación y Precisión Melódica",
+            niveles: {
+              logrado: { descripcion: "Canta o ejecuta las notas con afinación precisa en todo momento.", puntos: 4 },
+              casiLogrado: { descripcion: "Presenta pequeñas imprecisiones de afinación momentáneas.", puntos: 3 },
+              parcialmenteLogrado: { descripcion: "Frecuentes notas desafinadas, pero mantiene la línea melódica general.", puntos: 2 },
+              porLograr: { descripcion: "Incapaz de mantener la afinación básica.", puntos: 1 }
+            }
+          },
+          {
+            id: "crit_ritmo",
+            orden: 2,
+            nombre: "Rítmica y Tempo",
+            niveles: {
+              logrado: { descripcion: "Mantiene el pulso constante y ejecuta los ritmos indicados con precisión.", puntos: 4 },
+              casiLogrado: { descripcion: "Mantiene el tempo general con leves desajustes rítmicos.", puntos: 3 },
+              parcialmenteLogrado: { descripcion: "Frecuentes cambios de tempo o retrasos/adelantos significativos.", puntos: 2 },
+              porLograr: { descripcion: "No logra mantener el pulso ni la estructura rítmica básica.", puntos: 1 }
+            }
+          }
+        ]
+      },
+      {
+        id: "parte_2",
+        orden: 2,
+        nombre: "Parte 2: Expresividad y Técnica",
+        oasVinculados: ["OA 4"],
+        criterios: [
+          {
+            id: "crit_tecnica",
+            orden: 1,
+            nombre: "Postura y Técnica Instrumental/Vocal",
+            niveles: {
+              logrado: { descripcion: "Utiliza una postura óptima y técnica adecuada (respiración o digitación).", puntos: 4 },
+              casiLogrado: { descripcion: "Postura adecuada con detalles menores a corregir en la técnica.", puntos: 3 },
+              parcialmenteLogrado: { descripcion: "Postura inadecuada que afecta la emisión del sonido o digitación.", puntos: 2 },
+              porLograr: { descripcion: "Técnica y postura deficientes que dificultan la ejecución.", puntos: 1 }
+            }
+          },
+          {
+            id: "crit_expresividad",
+            orden: 2,
+            nombre: "Interpretación y Dinámica",
+            niveles: {
+              logrado: { descripcion: "Incorpora dinámicas (piano/forte) y expresividad acorde a la obra.", puntos: 4 },
+              casiLogrado: { descripcion: "Intenta incorporar dinámicas pero con poca consistencia.", puntos: 3 },
+              parcialmenteLogrado: { descripcion: "Ejecución plana, sin matices dinámicos ni expresividad.", puntos: 2 },
+              porLograr: { descripcion: "Ejecución mecánica y carente de cualquier sentido expresivo.", puntos: 1 }
+            }
+          }
+        ]
+      }
+    ]
+  })
+}
+
 export async function cargarRubricas(
   asignatura: string,
   curso: string
 ): Promise<RubricaTemplate[]> {
-  const col = userCol("rubricas")
-  const snap = await getDocs(query(col, orderBy("createdAt", "desc")))
-  const all = snap.docs.map(d => normalizarRubricaTemplate({ id: d.id, ...d.data() } as RubricaTemplate))
+  let all: RubricaTemplate[] = []
+  try {
+    const col = userCol("rubricas")
+    const snap = await getDocs(query(col, orderBy("createdAt", "desc")))
+    all = snap.docs.map(d => normalizarRubricaTemplate({ id: d.id, ...d.data() } as RubricaTemplate))
+  } catch (err) {
+    console.warn("Error al cargar rubricas de Firestore, usando localStorage/mock:", err)
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_rubricas")
+      if (stored) {
+        const parsed = JSON.parse(stored) as RubricaTemplate[]
+        if (Array.isArray(parsed)) {
+          parsed.forEach(r => {
+            if (!all.some(existing => existing.id === r.id)) {
+              all.push(normalizarRubricaTemplate(r))
+            }
+          })
+        }
+      }
+    } catch { /* noop */ }
+  }
+
+  if (all.length === 0 && asignatura === "Música" && (curso === "4to Básico" || curso === "2do Básico" || curso === "6to Básico")) {
+    const defaultRubrica = getMockRubricaMusica(asignatura, curso)
+    all.push(defaultRubrica)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("mock_rubricas", JSON.stringify(all))
+      } catch {}
+    }
+  }
+
   return all.filter(
     r => r.asignatura === asignatura && r.curso === curso
   )
 }
 
 export async function cargarRubrica(id: string): Promise<RubricaTemplate | null> {
-  const snap = await getDoc(userDoc("rubricas", id))
-  if (!snap.exists()) return null
-  return normalizarRubricaTemplate({ id: snap.id, ...snap.data() } as RubricaTemplate)
+  try {
+    const snap = await getDoc(userDoc("rubricas", id))
+    if (snap.exists()) {
+      return normalizarRubricaTemplate({ id: snap.id, ...snap.data() } as RubricaTemplate)
+    }
+  } catch (err) {
+    console.warn("Error al cargar rubrica de Firestore, buscando en localStorage/mock:", err)
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_rubricas")
+      if (stored) {
+        const parsed = JSON.parse(stored) as RubricaTemplate[]
+        if (Array.isArray(parsed)) {
+          const match = parsed.find(r => r.id === id)
+          if (match) return normalizarRubricaTemplate(match)
+        }
+      }
+    } catch { /* noop */ }
+  }
+
+  if (id.startsWith("mock_rubrica_musica_")) {
+    const curso = id.replace("mock_rubrica_musica_", "").replace(/_/g, " ")
+    let cursoCapitalized = "4to Básico"
+    if (curso.toLowerCase().includes("2do")) cursoCapitalized = "2do Básico"
+    if (curso.toLowerCase().includes("6to")) cursoCapitalized = "6to Básico"
+    return getMockRubricaMusica("Música", cursoCapitalized)
+  }
+
+  return null
 }
 
 // Firestore rechaza campos con valor `undefined`. Este helper los elimina.
@@ -619,23 +755,55 @@ function stripUndefined(value: any): any {
 
 export async function guardarRubrica(rubrica: RubricaTemplate): Promise<void> {
   const normalizada = normalizarRubricaTemplate(rubrica)
-  const { id, ...data } = normalizada
-  const payload = stripUndefined({
-    ...data,
-    puntajeMaximo: normalizada.puntajeMaximo,
-    updatedAt: serverTimestamp(),
-    createdAt: rubrica.createdAt ?? serverTimestamp(),
-  })
-  await setDoc(userDoc("rubricas", id), payload)
+  
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_rubricas")
+      const current = stored ? JSON.parse(stored) as RubricaTemplate[] : []
+      const filtered = current.filter(r => r.id !== normalizada.id)
+      filtered.unshift(normalizada)
+      localStorage.setItem("mock_rubricas", JSON.stringify(filtered))
+    } catch { /* noop */ }
+  }
+
+  try {
+    const { id, ...data } = normalizada
+    const payload = stripUndefined({
+      ...data,
+      puntajeMaximo: normalizada.puntajeMaximo,
+      updatedAt: serverTimestamp(),
+      createdAt: rubrica.createdAt ?? serverTimestamp(),
+    })
+    await setDoc(userDoc("rubricas", id), payload)
+  } catch (err) {
+    console.warn("Error guardando rubrica en Firestore, usando fallback localStorage:", err)
+  }
 }
 
 export async function eliminarRubrica(id: string): Promise<void> {
-  await deleteDoc(userDoc("rubricas", id))
-  // También eliminar la evaluación asociada si existe
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_rubricas")
+      if (stored) {
+        const current = JSON.parse(stored) as RubricaTemplate[]
+        const filtered = current.filter(r => r.id !== id)
+        localStorage.setItem("mock_rubricas", JSON.stringify(filtered))
+      }
+
+      const storedEval = localStorage.getItem("mock_evaluaciones")
+      if (storedEval) {
+        const currentEval = JSON.parse(storedEval) as EvaluacionRubrica[]
+        const filteredEval = currentEval.filter(e => e.rubricaId !== id)
+        localStorage.setItem("mock_evaluaciones", JSON.stringify(filteredEval))
+      }
+    } catch { /* noop */ }
+  }
+
   try {
+    await deleteDoc(userDoc("rubricas", id))
     await deleteDoc(userDoc("rubricas_evaluaciones", buildEvaluacionId(id)))
-  } catch {
-    // Si no existe, no importa
+  } catch (err) {
+    console.warn("Error al eliminar rubrica de Firestore:", err)
   }
 }
 
@@ -645,18 +813,67 @@ export async function cargarEvaluacion(
   rubricaId: string
 ): Promise<EvaluacionRubrica | null> {
   const id = buildEvaluacionId(rubricaId)
-  const snap = await getDoc(userDoc("rubricas_evaluaciones", id))
-  if (!snap.exists()) return null
-  return { id: snap.id, ...snap.data() } as EvaluacionRubrica
+  try {
+    const snap = await getDoc(userDoc("rubricas_evaluaciones", id))
+    if (snap.exists()) return { id: snap.id, ...snap.data() } as EvaluacionRubrica
+  } catch (err) {
+    console.warn("Error al cargar evaluacion de Firestore, buscando en localStorage/mock:", err)
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_evaluaciones")
+      if (stored) {
+        const parsed = JSON.parse(stored) as EvaluacionRubrica[]
+        if (Array.isArray(parsed)) {
+          const match = parsed.find(e => e.rubricaId === rubricaId)
+          if (match) return match
+        }
+      }
+    } catch { /* noop */ }
+  }
+
+  const rubrica = await cargarRubrica(rubricaId)
+  if (rubrica) {
+    const estudiantes = await cargarEstudiantes(rubrica.curso)
+    const evaluacion = nuevaEvaluacion(rubrica)
+    if (evaluacion.grupos.length > 0) {
+      evaluacion.grupos[0].estudiantes = estudiantes.map(est => ({
+        estudianteId: est.id,
+        nombre: est.nombre,
+        hasPie: !!est.pie,
+        puntajes: {},
+        observaciones: "",
+        completado: false
+      }))
+    }
+    return evaluacion
+  }
+
+  return null
 }
 
 export async function guardarEvaluacion(evaluacion: EvaluacionRubrica): Promise<void> {
-  const { id, ...data } = evaluacion
-  const payload = stripUndefined({
-    ...data,
-    updatedAt: serverTimestamp(),
-  })
-  await setDoc(userDoc("rubricas_evaluaciones", id), payload)
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("mock_evaluaciones")
+      const current = stored ? JSON.parse(stored) as EvaluacionRubrica[] : []
+      const filtered = current.filter(e => e.id !== evaluacion.id)
+      filtered.unshift(evaluacion)
+      localStorage.setItem("mock_evaluaciones", JSON.stringify(filtered))
+    } catch { /* noop */ }
+  }
+
+  try {
+    const { id, ...data } = evaluacion
+    const payload = stripUndefined({
+      ...data,
+      updatedAt: serverTimestamp(),
+    })
+    await setDoc(userDoc("rubricas_evaluaciones", id), payload)
+  } catch (err) {
+    console.warn("Error guardando evaluacion en Firestore, usando fallback localStorage:", err)
+  }
 }
 
 // ─── Plantillas vacías ────────────────────────────────────────────────────────

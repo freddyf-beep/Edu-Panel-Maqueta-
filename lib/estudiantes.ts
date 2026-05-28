@@ -63,12 +63,12 @@ const MOCK_ESTUDIANTES: Estudiante[] = [
 ]
 
 export async function cargarEstudiantes(curso: string): Promise<Estudiante[]> {
+  const cursoId = buildCursoId(curso)
   try {
     const auth = getAuth()
     const user = auth.currentUser
     if (user) {
       const basePath = `users/${user.uid}/estudiantes`
-      const cursoId = buildCursoId(curso)
       let snap = await getDoc(doc(db, basePath, cursoId))
       if (!snap.exists()) {
         const legacyId = legacyCursoId(curso)
@@ -84,18 +84,44 @@ export async function cargarEstudiantes(curso: string): Promise<Estudiante[]> {
   } catch (error) {
     console.error("Error cargando estudiantes para curso", curso, error)
   }
+
+  // Fallback a localStorage offline
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(`mock_estudiantes_${cursoId}`)
+      if (stored) {
+        const parsed = JSON.parse(stored) as Estudiante[]
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return normalizeEstudiantes(parsed)
+        }
+      }
+    } catch { /* noop */ }
+  }
+
   return normalizeEstudiantes(MOCK_ESTUDIANTES)
 }
 
 export async function guardarEstudiantes(curso: string, alumnos: Estudiante[]): Promise<void> {
-  const auth = getAuth()
-  const user = auth.currentUser
-  if (!user) throw new Error("No autenticado")
-
+  const normalized = normalizeEstudiantes(alumnos)
   const cursoId = buildCursoId(curso)
-  const ref = doc(db, `users/${user.uid}/estudiantes`, cursoId)
 
-  await setDoc(ref, { alumnos: normalizeEstudiantes(alumnos) })
+  // Guardar en localStorage de inmediato para persistencia offline
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(`mock_estudiantes_${cursoId}`, JSON.stringify(normalized))
+    } catch { /* noop */ }
+  }
+
+  try {
+    const auth = getAuth()
+    const user = auth.currentUser
+    if (user) {
+      const ref = doc(db, `users/${user.uid}/estudiantes`, cursoId)
+      await setDoc(ref, { alumnos: normalized })
+    }
+  } catch (error) {
+    console.warn("Error guardando estudiantes en Firestore, usando fallback localStorage:", error)
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

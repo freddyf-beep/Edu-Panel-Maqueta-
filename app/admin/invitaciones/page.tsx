@@ -14,17 +14,7 @@ interface Invitacion {
   usos: number
 }
 
-const DEFAULT_ADMIN_EMAILS = ["freddyfigueroagea@gmail.com", "freddyfiguea@gmail.com"]
-
-function isAdminEmail(email: string | null | undefined): boolean {
-  const key = (email ?? "").toLowerCase().trim()
-  if (!key) return false
-  const configured = [
-    ...DEFAULT_ADMIN_EMAILS,
-    ...(process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").split(","),
-  ].map((item) => item.toLowerCase().trim()).filter(Boolean)
-  return configured.includes(key)
-}
+import { isAdminEmail } from "@/lib/admin-helpers"
 
 function getApiErrorMessage(error: unknown, fallback: string) {
   if (error instanceof ApiError) {
