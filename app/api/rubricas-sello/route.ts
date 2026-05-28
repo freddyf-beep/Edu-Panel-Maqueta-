@@ -23,6 +23,8 @@ function checkRateLimit(uid: string): { ok: boolean; retryAfter?: number } {
 }
 
 export async function POST(req: NextRequest) {
+  let objetivo = ""
+  let sello = ""
   try {
     const authCheck = await verifyAllowedUser(req)
     if (!authCheck.ok) return authCheck.response
@@ -46,7 +48,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { objetivo, sello, niveles, curso, asignatura } = await req.json()
+    const body = await req.json()
+    objetivo = body.objetivo || ""
+    sello = body.sello || ""
+    const niveles = body.niveles
+    const curso = body.curso
+    const asignatura = body.asignatura
 
     if (!objetivo || !sello) {
       return NextResponse.json({ error: "Faltan parámetros requeridos: objetivo o sello." }, { status: 400 })
